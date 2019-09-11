@@ -14,6 +14,61 @@
 * Nestable routers.
 * ES7 async/await support.
 
+
+## 源码解读
+
+相比express的Router/Layer/Route模型。koa-router只有Router/Layer。
+
+Layer用来负责通过path的各种methods的中间件，Router则是不同path的。
+
+各个方法底层都是通过Router.register()对路由和中间件方法注册，最后暴露的中间件函数的通过Router.routes()来完成。
+
+将所有的中间件基于koa-compose合并为洋葱模型，对外暴露。
+
+模块依赖图：
+
+<img src="https://raw.githubusercontent.com/brizer/graph-bed/master/img/20190911110748.png"/>
+
+模块流程图：
+
+![](./graphviz/router.dot.svg)
+
+首先初始化Router，其stack用来存在中间件列表。
+
+### Router.methods()
+
+给get/post等每个method使用Router.register()进行注册。
+
+### Router.use()
+
+递归自己，兼容数组模式。然后如果发现参数是路由中间件，会带router属性，就嵌套拿出其stack并加到自己的stack队列中。
+
+最后通过Router.register()进行注册。
+
+### Router.all()
+
+一次性处理所有methods，然后通过Router.register()进行注册。
+
+### Router.register()
+
+对路由和中间件进行注册。首先递归自己，兼容数组模式。然后实例化Layer对象。每个相同的Path还有一个Layer对象，Layer上有methods和stack用来存在自己对应的中间件列表。
+
+通过Layer.setPrefix()设置通用前缀。
+
+拿到Router.params，对每一个命名的路由，通过Layer.param()进行中间件的增加。
+
+总之就是组装这个router的所有中间件。
+
+### Router.routes()
+
+真正的中间件核心方法，返回路由中间件。
+
+首先通过Router.match()调用Layer.match()，找到匹配的路由，挂载在ctx.matched上。然后将路由router挂载在ctx.router上。
+
+最后将所有匹配到的中间件列表进行compose，合并为洋葱模型，提供给外界。
+
+
+
 ## Migrating to 7 / Koa 2
 
 - The API has changed to match the new promise-based middleware

@@ -1,0 +1,52 @@
+digraph tree
+{
+    nodesep=0.5;
+    charset="UTF-8";
+    rankdir=LR;
+    fixedsize=true;
+    compound=true;
+    node [style="rounded,filled", width=0, height=0, shape=box, fillcolor="#E5E5E5", concentrate=true]
+
+    subgraph cluster_router {
+        label = "router.js";
+        "Router"
+        "Router.stack"->"中间件列表"[dir=none];
+        "Router.params"->"命名路由列表"[dir=none];
+        "Router.methods()"
+        "Router.register()"
+        "Router.use()"
+        "Router.match()"
+        "Router.routes()"->"返回路由中间件"[dir=none];
+        "Router.all()"->"一次性操作所有methods"[dir=none];
+    }
+    "Router.methods()"->"Router.register()"[label="forEach",color=red]
+    "Router.register()"->"Router.register()"[label="1.递归兼容数组调用",color=red]
+    "Router.register()"->"Layer"[label="2.实例化",color=red]
+    "Router.register()"->"Layer.setPrefix()"[label="3.设置通用前缀",color=red]
+    "Router.register()"->"Router.params"[label="4.Object.keys",color=red]
+    "Router.params"->"Layer.param()"[label="5.forEach",color=red]
+    "Router.match()"->"Layer.match()"
+    "Router.routes()"->"Router.match()"[label="1.获取匹配路由",color=blue]
+    "Router.routes()"->"ctx.router"[label="2.将this也就是Router实例，挂载",color=blue]
+    "Router.match()"->"ctx.matched"[label="3.将返回值挂载",color=blue]
+    "Router.match()"->"compose()"[label="4.将返回值合并",color=blue]
+    "compose()"->"koa-compose"[dir=none]
+    "Router.all()"->"Router.register()"
+    "Router.use()"->"Router.use()"[label="1.递归兼容数组调用",color=yellow]
+    "Router.use()"->"Router.register()"[label="2.给每个子路由注册",color=yellow]
+    subgraph cluster_layer {
+        label = "layer.js";
+        "Layer"
+        "Layer.stack"->"同一path不同methods的中间件列表"
+        "Layer.setPrefix()"->"设置前缀"[dir=none];
+        "Layer.param()"->"为指定命名路由运行中间件"[dir=none];
+        "Layer.match()"->"判断路由是否匹配"[dir=none];
+    }
+    "Layer.param()"->"Layer.stack"[label="splice"]
+    subgraph cluster_ctx {
+        label = "ctx";
+        "ctx"
+        "ctx.matched"
+        "ctx.router"
+    }
+}
